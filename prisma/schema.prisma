@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model user_profiles {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  googleUserId  String?  @db.VarChar(255)
+  fullName      String   @db.VarChar(255)
+  email         String?  @db.VarChar(255)
+  phone         String?  @db.VarChar(50)
+  aadhaarHash   String   @unique @db.VarChar(255)
+  role          String   @db.VarChar(50)
+  accountStatus String?  @default("PENDING") @db.VarChar(50)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model patients {
+  id                   String   @id @db.VarChar(50)
+  uhid                 String   @unique @db.VarChar(100)
+  name                 String   @db.VarChar(255)
+  age                  Int?
+  gender               String?  @db.VarChar(50)
+  bloodGroup           String?  @db.VarChar(20)
+  bloodGroupDetails    String?
+  isUniversalDonor     Boolean? @default(false)
+  photoUrl             String?
+  emergencyStatus      String?  @db.VarChar(50)
+  primaryDiagnosis     String?
+  secondaryConditions  Json?    @default("[]")
+  organDonor           Boolean? @default(false)
+  organDonorCardNumber String?  @db.VarChar(100)
+  nfcTagUid            String?  @db.VarChar(100)
+  qrPayload            String?
+  vitals               Json?
+  gcs                  Json?
+  allergies            Json?    @default("[]")
+  activeMedications    Json?    @default("[]")
+  emergencyContacts    Json?    @default("[]")
+  pastMedicalHistory   Json?    @default("[]")
+  pastPrescriptions    Json?    @default("[]")
+  interventions        Json?    @default("[]")
+  notes                String?
+  lastIncidentLocation String?
+  incidentTime         String?  @db.VarChar(100)
+  triageBay            String?  @db.VarChar(100)
+}
+
+model kyc_applications {
+  id                     String  @id @db.VarChar(50)
+  applicantName          String  @db.VarChar(255)
+  age                    Int?
+  gender                 String? @db.VarChar(50)
+  phone                  String? @db.VarChar(50)
+  email                  String? @db.VarChar(255)
+  globalId               String? @db.VarChar(100)
+  govtIdType             String? @db.VarChar(100)
+  govtIdNumber           String? @unique @db.VarChar(100)
+  bloodGroup             String? @db.VarChar(20)
+  organDonor             Boolean? @default(false)
+  organDonorCardNumber   String? @db.VarChar(100)
+  photoUrl               String?
+  primaryDiagnosis       String?
+  allergies              Json?   @default("[]")
+  emergencyContacts      Json?   @default("[]")
+  pastMedicalHistoryText String?
+  submittedAt            String? @db.VarChar(100)
+  status                 String? @default("PENDING_ADMIN_VERIFICATION") @db.VarChar(50)
+  reviewedBy             String? @db.VarChar(255)
+  reviewedAt             String? @db.VarChar(100)
+  rejectionReason        String?
+  allocatedUhid          String? @db.VarChar(100)
+  allocatedPatientId     String? @db.VarChar(50)
+}
+
+model prescriptions {
+  id                   String  @id @db.VarChar(100)
+  patientId            String  @db.VarChar(50)
+  patientName          String? @db.VarChar(255)
+  patientUhid          String? @db.VarChar(100)
+  uploadedByNurse      String? @db.VarChar(255)
+  hospitalUnit         String? @db.VarChar(100)
+  uploadedAt           String? @db.VarChar(100)
+  status               String? @default("awaiting_hitl") @db.VarChar(50)
+  imageUri             String?
+  imagePresetType      String? @db.VarChar(50)
+  overallConfidence    Decimal? @db.Decimal
+  extractedText        String?
+  doctorNotes          String?
+  extractedMedications Json?   @default("[]")
+  criticalExtract      Json?   @default("{}")
+  ocrStages            Json?   @default("[]")
+}

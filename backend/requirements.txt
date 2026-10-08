@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+paddleocr
+opencv-python
+Pillow
+numpy
+pandas
+scikit-learn
+torch
+transformers
+datasets
+rapidfuzz
+spacy
+regex
+dateparser

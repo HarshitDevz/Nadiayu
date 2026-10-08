@@ -1,0 +1,9 @@
+medicine_id,generic_name,brand_name,active_ingredient,strength,unit,route,common_abbreviations,synonyms
+MED001,Amoxicillin,Amoxil,Amoxicillin,500,mg,Oral,amox,Amoxicillin trihydrate
+MED002,Azithromycin,Zithromax,Azithromycin,250,mg,Oral,azithro,
+MED003,Metformin,Glucophage,Metformin hydrochloride,500,mg,Oral,met,
+MED004,Metoprolol,Lopressor,Metoprolol tartrate,50,mg,Oral,metop,
+MED005,Metronidazole,Flagyl,Metronidazole,400,mg,Oral,metro,
+MED006,Dextrose,D5W,Dextrose,5,%,IV,D5W,Glucose
+MED007,Dextromethorphan,Delsym,Dextromethorphan,30,mg,Oral,DXM,
+MED008,Amoxicillin and Clavulanate,Augmentin,Amoxicillin+Clavulanate potassium,625,mg,Oral,amox-clav,

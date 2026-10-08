@@ -77,8 +77,11 @@ export const PharmacistPortal = () => {
   };
 
   
+  const [registering, setRegistering] = useState(false);
+
   const handleRegister = async () => {
-    if (!extractedData) return;
+    if (!extractedData || registering) return;
+    setRegistering(true);
 
     // Map critical_medicines string[] → extractedMedications object[]
     const extractedMedications = (extractedData.critical_medicines || []).map((med, i) => ({
@@ -118,6 +121,7 @@ export const PharmacistPortal = () => {
 
     await addPrescriptionDirectly(newJob as any);
     alert(`Prescription data successfully saved and linked to patient registry!`);
+    setRegistering(false);
     handleReset();
   };
   return (
@@ -354,10 +358,14 @@ export const PharmacistPortal = () => {
             <div className="space-y-3">
               <button
                 onClick={handleRegister}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition-all duration-200 cursor-pointer"
+                disabled={registering}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold py-4 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition-all duration-200 cursor-pointer"
               >
-                <Upload className="w-5 h-5" />
-                Save & Register Patient
+                {registering ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
+                ) : (
+                  <><Upload className="w-5 h-5" /> Save & Register Patient</>
+                )}
               </button>
 
               <button

@@ -51,7 +51,7 @@ export const UserRegistrationPortal: React.FC = () => {
 
   useEffect(() => {
     if (currentUser && !fullName) {
-      setFullName(currentUser.displayName || '');
+      setFullName((currentUser as any).displayName || currentUser.user_metadata?.full_name || '');
       setEmail(currentUser.email || '');
     }
   }, [currentUser]);
@@ -176,7 +176,7 @@ export const UserRegistrationPortal: React.FC = () => {
       
       <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
         <div className="flex items-center gap-4 border-b border-slate-100 pb-6 mb-6">
-          <img src={currentUser.photoURL || undefined} alt="Profile" className="w-12 h-12 rounded-full border border-slate-200 bg-slate-50" />
+          <img src={(currentUser as any).photoURL || currentUser.user_metadata?.avatar_url || undefined} alt="Profile" className="w-12 h-12 rounded-full border border-slate-200 bg-slate-50" />
           <div>
             <h1 className="text-xl font-bold text-slate-900">Complete Profile Setup</h1>
             <p className="text-sm text-slate-600">Signed in as {currentUser.email}</p>

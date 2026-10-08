@@ -35,6 +35,7 @@ export const AdminControlPortal: React.FC = () => {
     playEmergencyAlarm,
     kycApplications,
     userProfiles,
+    patients,
     registerUserProfile,
     approveKYCApplication,
     rejectKYCApplication,
@@ -119,7 +120,7 @@ export const AdminControlPortal: React.FC = () => {
     if (profile.role === 'PATIENT') {
         const patientId = profile.googleUserId || profile.id;
         // Check if patient already exists to avoid 409
-        if (!patients.find(p => p.id === patientId)) {
+        if (!patients?.find((p: any) => p.id === patientId)) {
             const newPatient = {
                 id: patientId,
                 uhid: `UHID-${Math.floor(100000000 + Math.random() * 900000000)}`,
@@ -718,8 +719,7 @@ export const AdminControlPortal: React.FC = () => {
           </div>
         </div>
       )}
-      {/* 
-            {activeAdminTab === 'nurse_queue' && (
+      {activeAdminTab === 'nurse_queue' && (
         <div className="space-y-4 animate-in fade-in duration-300">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-800">Pending Nurse Registrations</h3>
@@ -759,6 +759,7 @@ export const AdminControlPortal: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* TAB 3: SYSTEM AUDIT & NODES */}
       {activeAdminTab === 'network_audit' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

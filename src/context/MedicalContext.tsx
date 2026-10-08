@@ -128,10 +128,14 @@ interface MedicalContextType {
 
 const MedicalContext = createContext<MedicalContextType | undefined>(undefined);
 
-// Helper to determine admin status (placeholder logic)
+// Helper to determine admin status
 const isUserAdmin = (user: User | null): boolean => {
-  // Example: admin if email matches a specific domain or list
-  return !!user && user.email?.endsWith('@admin.example.com');
+  if (!user) return false;
+  // Check app_metadata role (set via Supabase dashboard or service role)
+  if (user.app_metadata?.role === 'admin') return true;
+  // Fallback: check user_metadata
+  if (user.user_metadata?.role === 'admin') return true;
+  return false;
 };
 
 export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -264,8 +268,12 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
     pastMedicalHistory: row.past_medical_history ?? row.pastMedicalHistory ?? [],
     pastPrescriptions: row.past_prescriptions ?? row.pastPrescriptions ?? [],
     emergencyContacts: row.emergency_contacts ?? row.emergencyContacts ?? [],
+    interventions: row.interventions ?? [],
+    allergies: row.allergies ?? [],
     lastIncidentLocation: row.last_incident_location ?? row.lastIncidentLocation,
-    incidentTime: row.incident_time ?? row.incidentTime,
+    incidentTime: row.incident_time
+      ? (typeof row.incident_time === 'string' ? row.incident_time : new Date(row.incident_time).toLocaleTimeString())
+      : row.incidentTime,
     triageBay: row.triage_bay ?? row.triageBay,
   });
 
@@ -289,7 +297,13 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
   // 3. Real-Time Supabase Synchronization for KYC Applications
   const forceDataRefresh = async () => {
     const { data: profs } = await supabase.from('user_profiles').select('*');
-    if (profs) setUserProfiles(profs);
+    if (profs) setUserProfiles(profs.map((p: any) => ({
+      ...p,
+      googleUserId: p.google_user_id ?? p.googleUserId,
+      fullName: p.full_name ?? p.fullName,
+      aadhaarHash: p.aadhaar_hash ?? p.aadhaarHash,
+      accountStatus: p.account_status ?? p.accountStatus,
+    })));
     const { data: kycs } = await supabase.from('kyc_applications').select('*');
     if (kycs) setKycApplications(kycs as KYCApplication[]);
     const { data: pats } = await supabase.from('patients').select('*');
@@ -299,7 +313,13 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
     
     const fetchProfiles = async () => {
       const { data } = await supabase.from('user_profiles').select('*');
-      if (data) setUserProfiles(data);
+      if (data) setUserProfiles(data.map((p: any) => ({
+        ...p,
+        googleUserId: p.google_user_id ?? p.googleUserId,
+        fullName: p.full_name ?? p.fullName,
+        aadhaarHash: p.aadhaar_hash ?? p.aadhaarHash,
+        accountStatus: p.account_status ?? p.accountStatus,
+      })));
     };
     fetchProfiles();
     
@@ -338,7 +358,16 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     const fetchJobs = async () => {
       const { data } = await supabase.from('prescriptions').select('*');
-      if (data) setPrescriptions(data as any[]);
+      if (data) {
+        // Deduplicate by id in case of any race conditions
+        const seen = new Set<string>();
+        const deduped = data.filter((p: any) => {
+          if (seen.has(p.id)) return false;
+          seen.add(p.id);
+          return true;
+        });
+        setPrescriptions(deduped as any[]);
+      }
     };
     fetchJobs();
 
@@ -346,7 +375,7 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'prescriptions' }, fetchJobs)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel);  };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   // URL Hash Routing Synchronization
@@ -755,14 +784,19 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   // OCR Pipeline
-    const addPrescriptionDirectly = async (newJob: PrescriptionJob): Promise<void> => {
+  const addPrescriptionDirectly = async (newJob: PrescriptionJob): Promise<void> => {
     try {
       const { error } = await supabase.from('prescriptions').upsert(newJob);
       if (error) console.error('Prescription upsert error:', error);
+      // Do NOT manually push to state — realtime fetchJobs will handle it
     } catch (err) {
       console.error('Prescription catch err:', err);
+      // Only update local state as fallback if Supabase failed
+      setPrescriptions(prev => {
+        if (prev.some(p => p.id === newJob.id)) return prev;
+        return [newJob, ...prev];
+      });
     }
-    setPrescriptions(prev => [newJob, ...prev]);
   };
 
   const submitPrescriptionForOCR = async (
@@ -815,7 +849,7 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     await supabase.from('prescriptions').upsert(newJob);
-    setPrescriptions(prev => [newJob, ...prev]);
+    // Do NOT manually push — realtime subscription handles state update
 
     clinicalAudio.playConfirmChime();
     return jobId;

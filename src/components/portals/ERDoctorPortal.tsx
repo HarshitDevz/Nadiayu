@@ -736,15 +736,13 @@ export const ERDoctorPortal: React.FC = () => {
             className={`px-3 py-1.5 rounded-lg text-sm font-medium shrink-0 transition-colors cursor-pointer ${activeHistoryTab === 'active_2wk' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
           >
             Active Regimen ({(() => {
-              const rxCount = prescriptions
+              const seenIds = new Set<string>();
+              const dedupedRx = prescriptions
                 .filter(p => p.patientId === activePatient.id && p.status === 'approved')
-                .flatMap(p => p.extractedMedications).length;
-              const directNames = new Set((activePatient.activeMedications || []).map(m => m.name?.toLowerCase()));
-              const rxUnique = prescriptions
-                .filter(p => p.patientId === activePatient.id && p.status === 'approved')
-                .flatMap(p => p.extractedMedications)
-                .filter(m => !directNames.has(m.parsedName?.toLowerCase()));
-              return (activePatient.activeMedications?.length || 0) + rxUnique.length;
+                .filter(p => { if (seenIds.has(p.id)) return false; seenIds.add(p.id); return true; })
+                .slice(0, 2);
+              return (activePatient.activeMedications?.length || 0) +
+                dedupedRx.flatMap(p => p.extractedMedications).length;
             })()})
           </button>
           <button
@@ -762,46 +760,77 @@ export const ERDoctorPortal: React.FC = () => {
         </div>
 
         {activeHistoryTab === 'active_2wk' && (() => {
-          // Merge activeMedications + meds from approved prescriptions
-          const rxMeds = prescriptions
-            .filter(p => p.patientId === activePatient.id && p.status === 'approved')
-            .flatMap(p => p.extractedMedications.map(m => ({
-              id: m.id,
-              name: m.parsedName,
-              dosage: m.dosage,
-              frequency: m.frequency,
-              route: (m as any).route || '—',
-              prescribingDr: p.uploadedByNurse,
-              isHighRisk: false,
-              _source: p.hospitalUnit,
-              _date: p.uploadedAt,
-            })));
-          const directMeds = (activePatient.activeMedications || []).map(m => ({ ...m, _source: null, _date: null }));
-          // Deduplicate by name
+          // Deduplicate prescriptions by id, keep last 2 uploads only
           const seen = new Set<string>();
-          const allMeds = [...directMeds, ...rxMeds].filter(m => {
-            const key = m.name?.toLowerCase();
-            if (!key || seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
+          const approvedRx = prescriptions
+            .filter(p => p.patientId === activePatient.id && p.status === 'approved')
+            .filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; })
+            .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+            .slice(0, 2);
+
+          const directMeds = (activePatient.activeMedications || []);
+          const hasAnything = approvedRx.length > 0 || directMeds.length > 0;
+
+          if (!hasAnything) {
+            return <div className="text-sm text-slate-500 py-4 text-center bg-slate-50 rounded-xl">No active medications.</div>;
+          }
+
+          const formatDate = (iso: string) => {
+            try { return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+            catch { return iso; }
+          };
+
           return (
-            <div className="space-y-2">
-              {allMeds.length === 0 ? (
-                <div className="text-sm text-slate-500 py-4 text-center bg-slate-50 rounded-xl">No active medications.</div>
-              ) : (
-                allMeds.map(med => (
-                  <div key={med.id} className="p-4 bg-slate-50 rounded-xl flex justify-between border border-slate-100">
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                        <Pill className="w-4 h-4 text-slate-400" /> {med.name}
-                      </div>
-                      <div className="text-sm text-slate-500 mt-1">{med.dosage}{med.frequency ? ` • ${med.frequency}` : ''}{med.route && med.route !== '—' ? ` • ${med.route}` : ''}</div>
-                      {med.prescribingDr && <div className="text-xs text-slate-400 mt-0.5">By: {med.prescribingDr}{(med as any)._source ? ` · ${(med as any)._source}` : ''}</div>}
+            <div className="space-y-4">
+              {approvedRx.map(rx => (
+                rx.extractedMedications.length > 0 && (
+                  <div key={rx.id}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{formatDate(rx.uploadedAt)}</span>
+                      <span className="text-xs text-slate-400">·</span>
+                      <span className="text-xs font-semibold text-slate-500">{rx.hospitalUnit}</span>
+                      <span className="text-xs text-slate-400">·</span>
+                      <span className="text-xs text-slate-400">By: {rx.uploadedByNurse}</span>
                     </div>
-                    {med.isHighRisk && <div className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded border border-red-200 self-start">High Risk</div>}
+                    <div className="space-y-1.5">
+                      {rx.extractedMedications.map(m => (
+                        <div key={m.id} className="p-3 bg-slate-50 rounded-xl flex justify-between border border-slate-100">
+                          <div>
+                            <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                              <Pill className="w-3.5 h-3.5 text-slate-400" /> {m.parsedName}
+                            </div>
+                            {(m.dosage || m.frequency) && (
+                              <div className="text-xs text-slate-500 mt-0.5">{[m.dosage, m.frequency].filter(Boolean).join(' • ')}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))
+                )
+              ))}
+
+              {directMeds.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Direct Entry</span>
+                    <span className="text-xs text-slate-400">· ER Doctor Portal</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {directMeds.map(med => (
+                      <div key={med.id} className="p-3 bg-slate-50 rounded-xl flex justify-between border border-slate-100">
+                        <div>
+                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                            <Pill className="w-3.5 h-3.5 text-slate-400" /> {med.name}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">{[med.dosage, med.frequency, med.route].filter(Boolean).join(' • ')}</div>
+                          {med.prescribingDr && <div className="text-xs text-slate-400 mt-0.5">By: {med.prescribingDr}</div>}
+                        </div>
+                        {med.isHighRisk && <div className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded border border-red-200 self-start">High Risk</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           );

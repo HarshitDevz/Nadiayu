@@ -37,7 +37,7 @@ import { BadgePulse } from '../ui/BadgePulse';
 export const PatientDashboardPortal: React.FC = () => {
   const {
     activePatient,
-    patients,
+    currentUser,
     setActivePatientId,
     updatePatientProfile,
     setActivePortal,
@@ -52,8 +52,6 @@ export const PatientDashboardPortal: React.FC = () => {
   const [newContactName, setNewContactName] = useState<string>('');
   const [newContactPhone, setNewContactPhone] = useState<string>('');
   const [newContactRelation, setNewContactRelation] = useState<string>('');
-  const [search, setSearch] = useState('');
-
   const pendingApplications = kycApplications.filter(k => k.status === 'PENDING_ADMIN_VERIFICATION');
 
   if (showPublicPreview) {
@@ -69,9 +67,9 @@ export const PatientDashboardPortal: React.FC = () => {
 
   
   if (!activePatient) {
-    const filtered = patients.filter(p =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.uhid.toLowerCase().includes(search.toLowerCase())
+    const myKyc = kycApplications.find(k =>
+      k.email === currentUser?.email &&
+      k.status === 'PENDING_ADMIN_VERIFICATION'
     );
     return (
       <div className="max-w-md mx-auto mt-12 space-y-4 animate-in fade-in duration-200">
@@ -81,48 +79,34 @@ export const PatientDashboardPortal: React.FC = () => {
               <UserCircle2 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Select Patient</h2>
-              <p className="text-xs text-slate-500">Pick a registered patient to view their dashboard</p>
+              <h2 className="text-base font-bold text-slate-900">No Patient Profile Found</h2>
+              <p className="text-xs text-slate-500">
+                {myKyc
+                  ? `KYC submitted for "${myKyc.applicantName}" — awaiting admin approval.`
+                  : 'No health record linked to your account yet.'}
+              </p>
             </div>
           </div>
 
-          <input
-            type="text"
-            placeholder="Search by name or Aadhaar..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-          />
-
-          <div className="space-y-2 max-h-72 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="text-center py-6 text-sm text-slate-400">
-                {patients.length === 0 ? 'No patients registered yet.' : 'No match found.'}
-              </div>
-            ) : (
-              filtered.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setActivePatientId(p.id)}
-                  className="w-full text-left p-3.5 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all flex items-center justify-between group"
-                >
-                  <div>
-                    <div className="font-bold text-slate-900 text-sm group-hover:text-blue-700">{p.name}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{p.age}y · {p.gender} · {p.uhid}</div>
-                  </div>
-                  <span className="text-xs font-bold text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-lg mono">{p.bloodGroup}</span>
-                </button>
-              ))
-            )}
-          </div>
+          {myKyc ? (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
+              <strong>KYC Pending:</strong> Your application is under review. Once approved by the hospital admin, your dashboard will appear here automatically.
+            </div>
+          ) : (
+            <p className="text-sm text-slate-600">
+              Apply for a Citizen KYC to create your digital health record. Once approved, your full dashboard will be available here.
+            </p>
+          )}
 
           <div className="pt-2 border-t border-slate-100 flex gap-2">
-            <button
-              onClick={() => setShowKycModal(true)}
-              className="flex-1 btn-primary-blue py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
-            >
-              <ShieldCheck className="w-4 h-4" /> Apply KYC
-            </button>
+            {!myKyc && (
+              <button
+                onClick={() => setShowKycModal(true)}
+                className="flex-1 btn-primary-blue py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
+              >
+                <ShieldCheck className="w-4 h-4" /> Apply KYC
+              </button>
+            )}
             <button
               onClick={() => logout()}
               className="px-4 py-2.5 rounded-xl text-sm font-bold text-red-600 bg-red-50 border border-red-100 hover:bg-red-100 transition-colors"

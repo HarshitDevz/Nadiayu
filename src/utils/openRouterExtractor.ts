@@ -13,18 +13,19 @@ export interface OcrExtractionResult {
   medications: ExtractedMedication[];
 }
 
+const EMPTY_RESULT: OcrExtractionResult = {
+  critical: { critical_meds: [], accident_history: [], allergies: [] },
+  medications: []
+};
+
 export async function extractPrescriptionWithAI(
   text: string,
   patient: Patient | null,
   imageUri?: string
 ): Promise<OcrExtractionResult> {
   if (!openrouter) {
-    console.warn("No VITE_OPENROUTER_API_KEY provided. Falling back to mock data.");
-    // Fallback if no key is provided to prevent crash
-    return {
-      critical: { critical_meds: [], accident_history: [], allergies: [] },
-      medications: []
-    };
+    console.warn('VITE_OPENROUTER_API_KEY not configured — skipping AI extraction.');
+    return EMPTY_RESULT;
   }
 
   const patientContext = patient ? `
@@ -102,7 +103,7 @@ export async function extractPrescriptionWithAI(
       medications: parsed.medications || []
     };
   } catch (error) {
-    console.error("OpenRouter Extraction Error:", error);
-    throw error;
+    console.error('OpenRouter Extraction Error:', error);
+    return EMPTY_RESULT;
   }
 }

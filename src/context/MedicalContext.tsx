@@ -305,7 +305,26 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
       accountStatus: p.account_status ?? p.accountStatus,
     })));
     const { data: kycs } = await supabase.from('kyc_applications').select('*');
-    if (kycs) setKycApplications(kycs as KYCApplication[]);
+    if (kycs) setKycApplications(kycs.map((k: any) => ({
+      ...k,
+      applicantName: k.applicant_name ?? k.applicantName,
+      govtIdType: k.govt_id_type ?? k.govtIdType,
+      govtIdNumber: k.govt_id_number ?? k.govtIdNumber,
+      bloodGroup: k.blood_group ?? k.bloodGroup,
+      organDonor: k.organ_donor ?? k.organDonor,
+      organDonorCardNumber: k.organ_donor_card_number ?? k.organDonorCardNumber,
+      photoUrl: k.photo_url ?? k.photoUrl,
+      primaryDiagnosis: k.primary_diagnosis ?? k.primaryDiagnosis,
+      emergencyContacts: k.emergency_contacts ?? k.emergencyContacts ?? [],
+      pastMedicalHistoryText: k.past_medical_history_text ?? k.pastMedicalHistoryText,
+      submittedAt: k.submitted_at ?? k.submittedAt,
+      reviewedBy: k.reviewed_by ?? k.reviewedBy,
+      reviewedAt: k.reviewed_at ?? k.reviewedAt,
+      rejectionReason: k.rejection_reason ?? k.rejectionReason,
+      allocatedUhid: k.allocated_uhid ?? k.allocatedUhid,
+      allocatedPatientId: k.allocated_patient_id ?? k.allocatedPatientId,
+      globalId: k.global_id ?? k.globalId,
+    })) as KYCApplication[]);
     const { data: pats } = await supabase.from('patients').select('*');
     if (pats) setPatients(pats.map(mapPatient));
   };
@@ -329,7 +348,26 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     const fetchKyc = async () => {
       const { data, error } = await supabase.from('kyc_applications').select('*');
-      if (data) setKycApplications(data as KYCApplication[]);
+      if (data) setKycApplications(data.map((k: any) => ({
+        ...k,
+        applicantName: k.applicant_name ?? k.applicantName,
+        govtIdType: k.govt_id_type ?? k.govtIdType,
+        govtIdNumber: k.govt_id_number ?? k.govtIdNumber,
+        bloodGroup: k.blood_group ?? k.bloodGroup,
+        organDonor: k.organ_donor ?? k.organDonor,
+        organDonorCardNumber: k.organ_donor_card_number ?? k.organDonorCardNumber,
+        photoUrl: k.photo_url ?? k.photoUrl,
+        primaryDiagnosis: k.primary_diagnosis ?? k.primaryDiagnosis,
+        emergencyContacts: k.emergency_contacts ?? k.emergencyContacts ?? [],
+        pastMedicalHistoryText: k.past_medical_history_text ?? k.pastMedicalHistoryText,
+        submittedAt: k.submitted_at ?? k.submittedAt,
+        reviewedBy: k.reviewed_by ?? k.reviewedBy,
+        reviewedAt: k.reviewed_at ?? k.reviewedAt,
+        rejectionReason: k.rejection_reason ?? k.rejectionReason,
+        allocatedUhid: k.allocated_uhid ?? k.allocatedUhid,
+        allocatedPatientId: k.allocated_patient_id ?? k.allocatedPatientId,
+        globalId: k.global_id ?? k.globalId,
+      })) as KYCApplication[]);
     };
     fetchKyc();
 
@@ -407,24 +445,53 @@ export const MedicalProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const activePatient = React.useMemo(() => {
+    // 1. Explicit selection always wins
     if (activePatientId) {
       const p1 = patients.find(p => p.id === activePatientId);
       if (p1) return p1;
     }
-    const currentProfile = userProfiles.find(p => p.googleUserId === currentUser?.id || p.id === currentUser?.id);
+
+    if (!currentUser) return null;
+
+    const uid = currentUser.id;
+    const email = currentUser.email;
+
+    // 2. Find the user's profile by google user id or email
+    const currentProfile = userProfiles.find(p =>
+      p.googleUserId === uid ||
+      p.id === uid ||
+      (email && p.email === email)
+    );
+
     if (currentProfile) {
-       // Lookup by KYC Application email first
-       const myKyc = kycApplications.find(k => k.email === currentProfile.email && k.status === 'APPROVED');
-       if (myKyc && myKyc.allocatedPatientId) {
-           const p3 = patients.find(p => p.id === myKyc.allocatedPatientId);
-           if (p3) return p3;
-       }
-       
-       if (currentProfile.aadhaarHash) {
-          const p2 = patients.find(p => p.uhid === currentProfile.aadhaarHash || p.uhid.includes(currentProfile.aadhaarHash));
-          if (p2) return p2;
-       }
+      // 3a. Match via approved KYC allocatedPatientId
+      const myKyc = kycApplications.find(k =>
+        (k.email === email || k.email === currentProfile.email) &&
+        k.status === 'APPROVED'
+      );
+      if (myKyc?.allocatedPatientId) {
+        const p3 = patients.find(p => p.id === myKyc.allocatedPatientId);
+        if (p3) return p3;
+      }
+      // 3b. Match via KYC govtIdNumber -> patient uhid
+      if (myKyc?.govtIdNumber) {
+        const p4 = patients.find(p => p.uhid === myKyc.govtIdNumber);
+        if (p4) return p4;
+      }
+      // 3c. Match via aadhaarHash -> patient uhid
+      if (currentProfile.aadhaarHash) {
+        const p2 = patients.find(p =>
+          p.uhid === currentProfile.aadhaarHash ||
+          p.uhid.includes(currentProfile.aadhaarHash)
+        );
+        if (p2) return p2;
+      }
     }
+
+    // 4. Last resort: match patient by email in notes or by id = currentUser.id
+    const byId = patients.find(p => p.id === uid);
+    if (byId) return byId;
+
     return null;
   }, [activePatientId, patients, userProfiles, currentUser, kycApplications]);
 

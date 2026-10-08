@@ -279,7 +279,7 @@ export const PatientDashboardPortal: React.FC = () => {
         
         <div className="shrink-0 p-4 bg-slate-50 rounded-3xl border border-slate-200">
           <img 
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/#/patient_sos/' + activePatient.uhid)}`} 
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent('https://nadiayu.vercel.app/#/patient_sos/' + activePatient.uhid)}`} 
             alt="Emergency QR Code" 
             className="w-40 h-40 object-contain rounded-xl mix-blend-multiply"
           />
@@ -296,7 +296,7 @@ export const PatientDashboardPortal: React.FC = () => {
           
           <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2 relative z-10">
             <a 
-              href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(window.location.origin + '/#/patient_sos/' + activePatient.uhid)}`}
+              href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent('https://nadiayu.vercel.app/#/patient_sos/' + activePatient.uhid)}`}
               download={`Emergency_QR_${activePatient.uhid}.png`}
               target="_blank"
               rel="noreferrer"
@@ -306,7 +306,7 @@ export const PatientDashboardPortal: React.FC = () => {
               <span>Download HQ Image</span>
             </a>
             <button 
-              onClick={() => window.open(`/#/patient_sos/${activePatient.uhid}`, '_blank')}
+              onClick={() => window.open(`https://nadiayu.vercel.app/#/patient_sos/${activePatient.uhid}`, '_blank')}
               className="btn-secondary-paper py-2.5 px-5 rounded-xl text-sm font-bold flex items-center gap-2"
             >
               <Scan className="w-4 h-4 text-slate-600" />
